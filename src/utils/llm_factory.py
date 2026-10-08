@@ -47,11 +47,22 @@ def get_llm(provider: str = None, temperature: float = 0.0):
 
     elif provider == "gemini":
         from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(
-            model=config.GEMINI_MODEL,
-            google_api_key=config.GOOGLE_API_KEY,
-            temperature=temperature,
-        )
+        keys = [k.strip() for k in config.GOOGLE_API_KEY.split(",") if k.strip()]
+        
+        models = []
+        for key in keys:
+            models.append(
+                ChatGoogleGenerativeAI(
+                    model=config.GEMINI_MODEL,
+                    google_api_key=key,
+                    temperature=temperature,
+                    max_retries=1
+                )
+            )
+        
+        if len(models) == 1:
+            return models[0]
+        return models[0].with_fallbacks(models[1:])
 
     elif provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -105,7 +116,7 @@ def get_embeddings(provider: str = None):
     """
     provider = (provider or config.PROVIDER).lower()
 
-    if provider in ("openai", "openrouter"):
+    if provider == "openai":
         from langchain_openai import OpenAIEmbeddings
         kwargs = {
             "model": config.OPENAI_EMBEDDING_MODEL,
@@ -115,12 +126,10 @@ def get_embeddings(provider: str = None):
             kwargs["base_url"] = config.OPENAI_BASE_URL
         return OpenAIEmbeddings(**kwargs)
 
-    elif provider == "gemini":
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
-        return GoogleGenerativeAIEmbeddings(
-            model=config.GEMINI_EMBEDDING_MODEL,
-            google_api_key=config.GOOGLE_API_KEY,
-        )
+    elif provider in ("openrouter", "gemini"):
+        print(f"🚀 Đang dùng HuggingFace local embeddings cho {provider.capitalize()}...")
+        from langchain_huggingface import HuggingFaceEmbeddings
+        return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
     elif provider == "anthropic":
         # Anthropic không cung cấp Embeddings API → dùng OpenAI thay thế
