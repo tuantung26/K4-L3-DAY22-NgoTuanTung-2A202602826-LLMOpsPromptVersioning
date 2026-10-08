@@ -56,7 +56,7 @@ def get_llm(provider: str = None, temperature: float = 0.0):
                     model=config.GEMINI_MODEL,
                     google_api_key=key,
                     temperature=temperature,
-                    max_retries=1
+                    max_retries=10
                 )
             )
         
